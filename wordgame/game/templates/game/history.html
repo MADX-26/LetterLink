@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Match History</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+            color: white;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            text-decoration: none;
+            background: #00c896;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+        }
+
+        .back-btn:hover {
+            background: #00a67c;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #3a3a55;
+            padding: 12px;
+        }
+
+        td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #444;
+        }
+
+        tr:hover {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .winner {
+            color: #00ffcc;
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="top-bar">
+        <h2>📊 Match History</h2>
+        <a href="/" class="back-btn">⬅ Back</a>
+    </div>
+
+    <table>
+
+        <tr>
+            <th>Player 1</th>
+            <th>Player 2</th>
+            <th>Score</th>
+            <th>Winner</th>
+            <th>Date</th>
+        </tr>
+
+        {% for match in matches %}
+
+        <tr>
+            <td>{{ match.player1 }}</td>
+            <td>{{ match.player2 }}</td>
+            <td>{{ match.score1 }} - {{ match.score2 }}</td>
+
+            <td class="winner">
+                {{ match.winner }}
+            </td>
+
+            <td>{{ match.created_at }}</td>
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+</body>
+
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+            color: white;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: rgba(255,255,255,0.08);
+            padding: 40px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            width: 400px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 25px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .create-btn {
+            background: #007bff;
+        }
+
+        .create-btn:hover {
+            background: #0056b3;
+        }
+
+        .join-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: none;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .join-btn {
+            background: #00c896;
+            border: none;
+            cursor: pointer;
+        }
+
+        .join-btn:hover {
+            background: #00a67c;
+        }
+
+        .bottom-links {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .bottom-links a {
+            color: #00c896;
+            text-decoration: none;
+        }
+
+        .bottom-links a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>👋 Welcome, {{ request.user.username }}</h1>
+
+        <!-- CREATE ROOM -->
+        <a href="/create/" class="btn create-btn">
+            🎮 Create New Game
+        </a>
+
+        <!-- JOIN ROOM -->
+        <form method="POST" action="/join/">
+            {% csrf_token %}
+
+            <input 
+                type="text" 
+                name="room_code" 
+                placeholder="Enter Room Code"
+                class="join-input"
+                required
+            >
+
+            <button type="submit" class="btn join-btn">
+                🔑 Join Game
+            </button>
+        </form>
+
+        <!-- FOOTER LINKS -->
+        <div class="bottom-links">
+            <a href="/history/">📊 History</a>
+            <a href="/logout/">🚪 Logout</a>
+        </div>
+
+    </div>
+
+</body>
+
+</html>
