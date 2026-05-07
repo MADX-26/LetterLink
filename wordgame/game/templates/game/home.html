@@ -28,7 +28,18 @@
         }
 
         h1 {
-            margin-bottom: 25px;
+            margin-bottom: 15px;
+        }
+
+        /* 🔥 RULES */
+        .rules {
+            text-align: left;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .rule {
+            margin: 6px 0;
         }
 
         .btn {
@@ -95,6 +106,17 @@
     <div class="container">
 
         <h1>👋 Welcome, {{ request.user.username }}</h1>
+
+        <!-- 🔥 RULES SECTION -->
+        <div class="rules">
+            <strong>📜 Game Rules:</strong>
+            <div class="rule">• Players take turns placing letters</div>
+            <div class="rule">• Words form horizontally & vertically</div>
+            <div class="rule">• Minimum 3-letter words score</div>
+            <div class="rule">• Only valid words count</div>
+            <div class="rule">• Game ends when grid is full</div>
+            <div class="rule">• Highest score wins 🏆</div>
+        </div>
 
         <!-- CREATE ROOM -->
         <a href="/create/" class="btn create-btn">
