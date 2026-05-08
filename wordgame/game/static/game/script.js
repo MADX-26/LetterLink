@@ -11,6 +11,7 @@ const socket = new WebSocket(
 let myPlayerNumber = null;
 let currentPlayer = 1;
 let selectedCell = null;
+let playerNames = { 1: "Player 1", 2: "Player 2" };
 
 
 // ==========================
@@ -22,17 +23,34 @@ socket.onmessage = (event) => {
     const message = JSON.parse(event.data);
     console.log("SERVER:", message);
 
+    // START GAME (RECEIVE USERNAMES)
+    if (message.type === "start_game") {
+        playerNames = message.usernames;
+        updatePlayerLabels();
+        return;
+    }
+
     // PLAYER ASSIGNMENT
     if (message.type === "player_assignment") {
         myPlayerNumber = message.player;
-        showToast(`You are Player ${myPlayerNumber}`);
+        if (message.usernames) {
+            playerNames = message.usernames;
+            updatePlayerLabels();
+        }
+        showToast(`Connected as ${message.username}`);
         return;
     }
 
     // GAME UPDATE
     if (message.type === "update") {
 
-        const { board, turn, scores, words } = message;
+        const { board, turn, scores, words, usernames } = message;
+
+        // Sync usernames
+        if (usernames) {
+            playerNames = usernames;
+            updatePlayerLabels();
+        }
 
         document.querySelectorAll(".cell").forEach(cell => {
 
@@ -57,7 +75,7 @@ socket.onmessage = (event) => {
 
         // TURN UPDATE + GLOW
         currentPlayer = turn;
-        currentPlayerText.textContent = `Player ${turn}`;
+        updatePlayerLabels(); // This will update the turn text correctly using the sync'd names
         currentPlayerText.classList.add("turn-active");
 
         setTimeout(() => {
@@ -77,30 +95,7 @@ socket.onmessage = (event) => {
 
     // GAME END
     if (message.type === "game_end") {
-
-        const popup = document.createElement("div");
-        popup.classList.add("popup-overlay");
-
-        popup.innerHTML = `
-            <div class="popup-box">
-                <h2>${message.winner}</h2>
-                <p>Final Score: ${message.scores[1]} - ${message.scores[2]}</p>
-
-                <button id="playAgainBtn">Play Again</button>
-                <button id="backBtn">Back</button>
-            </div>
-        `;
-
-        document.body.appendChild(popup);
-
-        document.getElementById("playAgainBtn").onclick = () => {
-            socket.send(JSON.stringify({ type: "restart" }));
-            popup.remove();
-        };
-
-        document.getElementById("backBtn").onclick = () => {
-            window.location.replace("/");
-        };
+        showEndPopup(message.winner, message.scores);
     }
 
     // RESET GAME
@@ -112,7 +107,7 @@ socket.onmessage = (event) => {
         });
 
         currentPlayer = 1;
-        currentPlayerText.textContent = "Player 1";
+        updatePlayerLabels();
 
         score1Text.textContent = 0;
         score2Text.textContent = 0;
@@ -120,10 +115,62 @@ socket.onmessage = (event) => {
 
     // PLAYER LEFT
     if (message.type === "player_left") {
-        showToast("Opponent left the game");
-        setTimeout(() => window.location.replace("/"), 1200);
+        const winnerMsg = message.winner ? `🏆 ${message.winner} Wins!` : "Opponent left the game";
+        const subMsg = message.winner ? "(Your opponent has exited the match)" : "";
+        showEndPopup(winnerMsg, null, true); // true = hide play again
+        
+        // Add specific text for disconnect
+        const popupBox = document.querySelector(".popup-box");
+        if (popupBox && subMsg) {
+            const p = document.createElement("p");
+            p.textContent = subMsg;
+            p.style.color = "#6b7280";
+            p.style.marginBottom = "2rem";
+            popupBox.insertBefore(p, popupBox.querySelector("div"));
+        }
     }
 };
+
+function showEndPopup(title, scores, hidePlayAgain = false) {
+    // Remove existing if any
+    const existing = document.querySelector(".popup-overlay");
+    if (existing) existing.remove();
+
+    const popup = document.createElement("div");
+    popup.classList.add("popup-overlay");
+
+    let scoreHtml = "";
+    if (scores) {
+        scoreHtml = `<p style="font-size: 1.25rem; color: #6b7280; margin-bottom: 2rem;">
+            Final Score: <b style="color: #1f2937;">${scores[1]} - ${scores[2]}</b>
+        </p>`;
+    }
+
+    popup.innerHTML = `
+        <div class="popup-box">
+            <h2 class="modern-title" style="font-size: 2rem; margin-bottom: 1rem;">${title}</h2>
+            ${scoreHtml}
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                ${!hidePlayAgain ? '<button id="playAgainBtn" class="modern-btn">Play Again</button>' : ''}
+                <button id="backBtn" class="modern-btn" style="background-color: #f3f4f6; color: #4b5563;">Back to Home</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    if (!hidePlayAgain) {
+        document.getElementById("playAgainBtn").onclick = () => {
+            socket.send(JSON.stringify({ type: "restart" }));
+            popup.remove();
+        };
+    }
+
+    document.getElementById("backBtn").onclick = () => {
+        window.location.replace("/");
+    };
+}
 
 
 // ==========================
@@ -243,4 +290,35 @@ function createToastContainer() {
     document.body.appendChild(div);
 
     return div;
+}
+
+function updatePlayerLabels() {
+    if (!playerNames) return;
+
+    // Get names safely whether playerNames is a dict or array
+    const p1 = getPlayerName(1);
+    const p2 = getPlayerName(2);
+    
+    const p1Elem = document.getElementById("p1-name");
+    const p2Elem = document.getElementById("p2-name");
+    
+    if (p1Elem) p1Elem.textContent = p1;
+    if (p2Elem) p2Elem.textContent = p2;
+    
+    // Update turn text to show the name of the current player
+    if (currentPlayerText) {
+        currentPlayerText.textContent = (currentPlayer === 1) ? p1 : p2;
+    }
+}
+
+function getPlayerName(num) {
+    if (!playerNames) return `Player ${num}`;
+
+    if (Array.isArray(playerNames)) {
+        // Handle 0-based array index for 1-based player number
+        return playerNames[num - 1] || `Player ${num}`;
+    } else {
+        // Handle object with string or number keys
+        return playerNames[num.toString()] || playerNames[num] || `Player ${num}`;
+    }
 }

@@ -1,87 +1,46 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Register</title>
-
+    <title>Register - Grid Word</title>
+    <link rel="stylesheet" href="{% static 'game/style.css' %}">
     <style>
-
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-        }
-
-        .container {
-            background: rgba(255,255,255,0.08);
-            padding: 40px;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            width: 320px;
-            text-align: center;
-        }
-
-        h1 {
-            margin-bottom: 25px;
-        }
-
         input {
             width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 6px;
+            padding: 0.875rem;
+            margin: 0.75rem 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
             outline: none;
+            font-size: 1rem;
+            box-sizing: border-box;
         }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 15px;
-            background: #00c896;
-            border: none;
-            border-radius: 6px;
-            color: white;
-            cursor: pointer;
+        input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
-
-        button:hover {
-            background: #00a67c;
-        }
-
-        a {
-            display: block;
-            margin-top: 15px;
-            color: #00c896;
-            text-decoration: none;
-        }
-
     </style>
 </head>
-
 <body>
-
-    <div class="container">
-
-        <h1>Create Account</h1>
-
+    <div class="modern-card" style="max-width: 24rem;">
+        <div class="modern-header">
+            <h1 class="modern-title" style="font-size: 1.875rem;">Create Account</h1>
+            <p class="modern-subtitle">Join the Grid Word community</p>
+        </div>
+        
         <form method="POST">
             {% csrf_token %}
-
             <input type="text" name="username" placeholder="Username" required>
             <input type="password" name="password" placeholder="Password" required>
-
-            <button type="submit">Register</button>
+            <button type="submit" class="modern-btn" style="margin-top: 1rem;">Register</button>
         </form>
 
-        <a href="/login/">Already have an account? Login</a>
-
+        <div class="divider"></div>
+        
+        <div style="text-align: center;">
+            <a href="/login/" class="footer-link">Already have an account? Login</a>
+        </div>
     </div>
-
 </body>
 </html>

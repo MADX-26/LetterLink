@@ -1,102 +1,55 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <title>Join Room</title>
-
+    <title>Join Room - Grid Word</title>
+    <link rel="stylesheet" href="{% static 'game/style.css' %}">
     <style>
-
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-        }
-
-        .container {
-            background: rgba(255,255,255,0.08);
-            padding: 40px;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            width: 350px;
-            text-align: center;
-        }
-
-        h2 {
-            margin-bottom: 20px;
-        }
-
         input {
             width: 100%;
-            padding: 10px;
-            margin: 15px 0;
-            border: none;
-            border-radius: 6px;
+            padding: 0.875rem;
+            margin: 1rem 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
             outline: none;
-            font-size: 16px;
+            font-size: 1.25rem;
+            box-sizing: border-box;
             text-align: center;
-            letter-spacing: 2px;
+            letter-spacing: 0.25rem;
+            font-weight: 700;
+            text-transform: uppercase;
         }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #00c896;
-            border: none;
-            border-radius: 6px;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            transition: 0.3s;
+        input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
-
-        button:hover {
-            background: #00a67c;
-        }
-
-        a {
-            display: block;
-            margin-top: 15px;
-            color: #00c896;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
     </style>
-
 </head>
-
 <body>
-
-    <div class="container">
-
-        <h2>🔑 Join Game Room</h2>
+    <div class="modern-card" style="max-width: 24rem; text-align: center;">
+        <div class="modern-header">
+            <h1 class="modern-title" style="font-size: 1.875rem;">Join Game</h1>
+            <p class="modern-subtitle">Enter the room code shared with you</p>
+        </div>
 
         <form method="POST">
             {% csrf_token %}
-
             <input 
                 type="text" 
                 name="room_code" 
-                placeholder="Enter Room Code"
+                placeholder="CODE"
+                maxlength="8"
                 required
             >
-
-            <button type="submit">Join Room</button>
+            <button type="submit" class="modern-btn">Join Room</button>
         </form>
 
-        <a href="/">⬅ Back to Home</a>
+        <div class="divider"></div>
 
+        <div style="text-align: center;">
+            <a href="/" class="footer-link">⬅ Back to Home</a>
+        </div>
     </div>
-
 </body>
-
 </html>

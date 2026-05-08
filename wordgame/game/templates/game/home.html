@@ -1,151 +1,83 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
-
-    <style>
-
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
-            color: white;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .container {
-            background: rgba(255,255,255,0.08);
-            padding: 40px;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            width: 400px;
-            text-align: center;
-        }
-
-        h1 {
-            margin-bottom: 15px;
-        }
-
-        /* 🔥 RULES */
-        .rules {
-            text-align: left;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .rule {
-            margin: 6px 0;
-        }
-
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 6px;
-            text-decoration: none;
-            color: white;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-
-        .create-btn {
-            background: #007bff;
-        }
-
-        .create-btn:hover {
-            background: #0056b3;
-        }
-
-        .join-input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 6px;
-            border: none;
-            text-align: center;
-            letter-spacing: 2px;
-        }
-
-        .join-btn {
-            background: #00c896;
-            border: none;
-            cursor: pointer;
-        }
-
-        .join-btn:hover {
-            background: #00a67c;
-        }
-
-        .bottom-links {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .bottom-links a {
-            color: #00c896;
-            text-decoration: none;
-        }
-
-        .bottom-links a:hover {
-            text-decoration: underline;
-        }
-
-    </style>
-
+    <title>Dashboard - Grid Word</title>
+    <link rel="stylesheet" href="{% static 'game/style.css' %}">
 </head>
 
 <body>
 
-    <div class="container">
-
-        <h1>👋 Welcome, {{ request.user.username }}</h1>
-
-        <!-- 🔥 RULES SECTION -->
-        <div class="rules">
-            <strong>📜 Game Rules:</strong>
-            <div class="rule">• Players take turns placing letters</div>
-            <div class="rule">• Words form horizontally & vertically</div>
-            <div class="rule">• Minimum 3-letter words score</div>
-            <div class="rule">• Only valid words count</div>
-            <div class="rule">• Game ends when grid is full</div>
-            <div class="rule">• Highest score wins 🏆</div>
+    <div class="modern-card">
+        <div class="modern-header">
+            <h1 class="modern-title">Grid Word</h1>
+            <p class="modern-subtitle">A strategic letter-placing word game for two players</p>
         </div>
 
-        <!-- CREATE ROOM -->
-        <a href="/create/" class="btn create-btn">
-            🎮 Create New Game
-        </a>
+        <div class="section-header">
+            <svg class="play-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            How to Play
+        </div>
 
-        <!-- JOIN ROOM -->
-        <form method="POST" action="/join/">
+        <ul class="step-list">
+            <li class="step-item">
+                <span class="step-number">1</span>
+                <span>Two players take turns placing single letters on any empty cell</span>
+            </li>
+            <li class="step-item">
+                <span class="step-number">2</span>
+                <span>Words can be formed horizontally (left to right) and vertically (top to bottom)</span>
+            </li>
+            <li class="step-item">
+                <span class="step-number">3</span>
+                <span>Points are scored based on valid words formed (minimum 2 letters)</span>
+            </li>
+            <li class="step-item">
+                <span class="step-number">4</span>
+                <span>Only real words count for scoring - random letter combinations don't score</span>
+            </li>
+            <li class="step-item">
+                <span class="step-number">5</span>
+                <span>The game ends when the grid is completely filled</span>
+            </li>
+            <li class="step-item">
+                <span class="step-number">6</span>
+                <span>The player with the highest score wins!</span>
+            </li>
+        </ul>
+
+        <div class="divider"></div>
+
+        <a href="/create/" class="modern-btn">Start New Game</a>
+
+        <div class="divider"></div>
+
+        <div class="section-header" style="font-size: 1.125rem; margin-top: 1.5rem;">
+            🔑 Join an Existing Game
+        </div>
+
+        <form method="POST" action="/join/" style="display: flex; gap: 0.5rem;">
             {% csrf_token %}
-
             <input 
                 type="text" 
                 name="room_code" 
-                placeholder="Enter Room Code"
-                class="join-input"
+                placeholder="Enter Room Code" 
+                style="flex: 1; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.5rem; outline: none; font-size: 1rem; text-transform: uppercase;"
                 required
             >
-
-            <button type="submit" class="btn join-btn">
-                🔑 Join Game
-            </button>
+            <button type="submit" class="modern-btn" style="width: auto; padding: 0.75rem 1.5rem;">Join</button>
         </form>
 
-        <!-- FOOTER LINKS -->
-        <div class="bottom-links">
-            <a href="/history/">📊 History</a>
-            <a href="/logout/">🚪 Logout</a>
-        </div>
+        <div class="divider"></div>
 
+        <div class="footer-links">
+            <a href="/leaderboard/" class="footer-link">🏆 Leader Board</a>
+            <a href="/logout/" class="footer-link">🚪 Logout</a>
+        </div>
     </div>
 
 </body>

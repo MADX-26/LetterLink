@@ -151,15 +151,32 @@ def logout_view(request):
 
     return redirect('login')
 
-def history_view(request):
-    
+from django.db.models import Q, F
+
+def leaderboard_view(request):
     if not request.user.is_authenticated:
         return redirect('login')
 
-    matches = Match.objects.all().order_by('-created_at')
+    users = User.objects.all()
+    leaderboard = []
+
+    for user in users:
+        # Calculate wins: check if the winner string starts with the user's name
+        wins = Match.objects.filter(
+            Q(winner__startswith=f"{user.username} Wins")
+        ).count()
+        
+        if wins > 0 or Match.objects.filter(Q(player1=user) | Q(player2=user)).exists():
+            leaderboard.append({
+                'username': user.username,
+                'wins': wins
+            })
+
+    # Sort by wins descending
+    leaderboard = sorted(leaderboard, key=lambda x: x['wins'], reverse=True)
 
     return render(
         request,
-        "game/history.html",
-        {"matches": matches}
+        "game/leaderboard.html",
+        {"leaderboard": leaderboard}
     )

@@ -12,42 +12,41 @@
 
 <body>
 
-    <div class="container">
-
+    <div class="modern-card" style="max-width: 48rem;">
         <!-- HEADER -->
         <div class="top-bar">
-            <h2>🎮 Word Grid</h2>
-
-            <div class="user-actions">
-                <span>👤 {{ request.user.username }}</span>
-                <a href="/logout/">Logout</a>
+            <h1 class="modern-title" style="font-size: 1.5rem;">🎮 Word Grid</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="color: #6b7280; font-size: 0.875rem;">👤 <b>{{ request.user.username }}</b></span>
+                <a href="/logout/" class="footer-link" style="color: #ef4444; font-weight: 600;">Logout</a>
             </div>
         </div>
 
         <!-- TURN -->
         <div class="turn-box">
-            Current Turn:
-            <span id="current-player" class="highlight">Player 1</span>
+            <span style="color: #6b7280; font-weight: 500;">Current Turn:</span>
+            <span id="current-player" class="highlight">Connecting...</span>
         </div>
 
         <!-- SCORE BOARD -->
         <div class="score-board">
-
             <div class="score-card">
-                <h3>Player 1</h3>
+                <h3 id="p1-name">---</h3>
                 <span id="score1">0</span>
             </div>
-
             <div class="score-card">
-                <h3>Player 2</h3>
+                <h3 id="p2-name">---</h3>
                 <span id="score2">0</span>
             </div>
-
         </div>
 
         <!-- GRID -->
         <div class="grid" id="grid"></div>
 
+        <div class="divider"></div>
+        <div style="text-align: center;">
+            <a href="/" class="footer-link">⬅ Exit to Home</a>
+        </div>
     </div>
 
     <!-- ROOM NAME -->

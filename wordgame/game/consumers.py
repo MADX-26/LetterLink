@@ -23,17 +23,35 @@ class GameConsumer(AsyncWebsocketConsumer):
                 "board": [[None for _ in range(5)] for _ in range(5)],
                 "scores": {1: 0, 2: 0},
                 "used_words": set(),
-                "processing": False
+                "processing": False,
+                "usernames": {"1": None, "2": None}
             }
 
         room = rooms[self.room_name]
 
-        if len(room["players"]) >= 2:
-            await self.close()
-            return
+        # Check if this user is already in the room (reconnection/transition)
+        self.player_number = None
+        for num_str, name in room["usernames"].items():
+            if name == self.username:
+                self.player_number = int(num_str)
+                break
+        
+        if self.player_number is None:
+            # Assign a new slot if available
+            if room["usernames"]["1"] is None:
+                self.player_number = 1
+            elif room["usernames"]["2"] is None:
+                self.player_number = 2
+            else:
+                # Room full with 2 other people
+                await self.close()
+                return
+            room["usernames"][str(self.player_number)] = self.username
 
-        self.player_number = len(room["players"]) + 1
+        print(f"DEBUG: Player {self.username} assigned number {self.player_number}")
+        print(f"DEBUG: Current room usernames: {room['usernames']}")
 
+        # Track active channel
         room["players"].append({
             "channel": self.channel_name,
             "player": self.player_number,
@@ -49,40 +67,90 @@ class GameConsumer(AsyncWebsocketConsumer):
 
         await self.send(json.dumps({
             "type": "player_assignment",
-            "player": self.player_number
+            "player": self.player_number,
+            "username": self.username,
+            "usernames": room["usernames"]
         }))
 
         if len(room["players"]) == 2:
             await self.channel_layer.group_send(
                 self.room_group_name,
-                {"type": "start_game"}
+                {
+                    "type": "start_game",
+                    "usernames": room["usernames"]
+                }
             )
 
     async def start_game(self, event):
-        await self.send(json.dumps({"type": "start_game"}))
+        await self.send(json.dumps({
+            "type": "start_game",
+            "usernames": event["usernames"]
+        }))
 
     async def disconnect(self, close_code):
 
         if self.room_name in rooms:
             room = rooms[self.room_name]
 
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {"type": "player_left"}
-            )
+            # If game was active and board not full, award win to other player
+            if not self.is_board_full(room["board"]) and len(room["players"]) == 2:
+                other_player = [p for p in room["players"] if p["channel"] != self.channel_name][0]
+                winner_username = other_player["username"]
+                
+                # Award win to the remaining player
+                await self.save_match_disconnect(
+                    room["usernames"].get("1") or room["usernames"].get(1), 
+                    room["usernames"].get("2") or room["usernames"].get(2), 
+                    winner_username,
+                    room["scores"][1],
+                    room["scores"][2]
+                )
+
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        "type": "player_left",
+                        "winner": winner_username
+                    }
+                )
 
             room["players"] = [
                 p for p in room["players"]
                 if p["channel"] != self.channel_name
             ]
+            
+            # Clean up room if empty
+            if len(room["players"]) == 0:
+                del rooms[self.room_name]
 
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
 
+    @sync_to_async
+    def save_match_disconnect(self, player1_username, player2_username, winner_username, score1, score2):
+        try:
+            user1 = User.objects.get(username=player1_username)
+            user2 = User.objects.get(username=player2_username)
+            
+            winner_display = f"{winner_username} Wins! (Opponent Left)"
+            
+            Match.objects.create(
+                player1=user1,
+                player2=user2,
+                score1=score1,
+                score2=score2,
+                winner=winner_display
+            )
+        except Exception as e:
+            print(f"Error saving match on disconnect: {e}")
+
     async def player_left(self, event):
-        await self.send(json.dumps({"type": "player_left"}))
+        await self.send(json.dumps({
+            "type": "player_left",
+            "winner": event.get("winner")
+        }))
 
     # ==========================
     # MAIN GAME LOGIC
@@ -145,11 +213,19 @@ class GameConsumer(AsyncWebsocketConsumer):
 
             if self.is_board_full(room["board"]):
 
-                winner = self.get_winner(room["scores"])
+                scores = room["scores"]
+                user1 = room["players"][0]["username"]
+                user2 = room["players"][1]["username"]
+                
+                if scores[1] > scores[2]:
+                    winner = f"{user1} Wins!"
+                elif scores[2] > scores[1]:
+                    winner = f"{user2} Wins!"
+                else:
+                    winner = "Draw!"
 
                 players = room["players"]
 
-                # 🔥 FIX: async-safe DB call
                 if len(players) == 2:
                     await self.save_match(players, room, winner)
 
@@ -188,12 +264,14 @@ class GameConsumer(AsyncWebsocketConsumer):
     # ==========================
 
     async def game_update(self, event):
+        room = rooms.get(self.room_name, {})
         await self.send(json.dumps({
             "type": "update",
             "board": event["board"],
             "turn": event["turn"],
             "scores": event["scores"],
-            "words": event["words"]
+            "words": event["words"],
+            "usernames": room.get("usernames", {"1": "Player 1", "2": "Player 2"})
         }))
 
     async def game_end(self, event):
@@ -382,7 +460,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         found = []
 
         for i in range(len(line)):
-            for j in range(i+3, len(line)+1):
+            for j in range(i+2, len(line)+1):
                 word = line[i:j]
                 if word in dictionary and word not in used:
                     used.add(word)
