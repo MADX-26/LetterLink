@@ -126,3 +126,4 @@ CHANNEL_LAYERS = {
         "channels.layers.InMemoryChannelLayer"
     }
 }
+STATIC_ROOT = BASE_DIR / "staticfiles"
