@@ -116,17 +116,28 @@ socket.onmessage = (event) => {
     // PLAYER LEFT
     if (message.type === "player_left") {
         const winnerMsg = message.winner ? `🏆 ${message.winner} Wins!` : "Opponent left the game";
-        const subMsg = message.winner ? "(Your opponent has exited the match)" : "";
+        const subMsg = message.winner ? "(Your opponent has exited the match)" : "The other player has disconnected.";
+        
         showEndPopup(winnerMsg, null, true); // true = hide play again
         
-        // Add specific text for disconnect
         const popupBox = document.querySelector(".popup-box");
-        if (popupBox && subMsg) {
+        if (popupBox) {
             const p = document.createElement("p");
-            p.textContent = subMsg;
+            p.innerHTML = `${subMsg}<br><small style="color: #9ca3af; margin-top: 0.5rem; display: block;">Redirecting to home in <span id="countdown">10</span>s...</small>`;
             p.style.color = "#6b7280";
             p.style.marginBottom = "2rem";
             popupBox.insertBefore(p, popupBox.querySelector("div"));
+
+            let seconds = 10;
+            const timer = setInterval(() => {
+                seconds--;
+                const count = document.getElementById("countdown");
+                if (count) count.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(timer);
+                    window.location.href = "/";
+                }
+            }, 1000);
         }
     }
 };
@@ -168,7 +179,7 @@ function showEndPopup(title, scores, hidePlayAgain = false) {
     }
 
     document.getElementById("backBtn").onclick = () => {
-        window.location.replace("/");
+        window.location.href = "/";
     };
 }
 

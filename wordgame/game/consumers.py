@@ -92,27 +92,39 @@ class GameConsumer(AsyncWebsocketConsumer):
         if self.room_name in rooms:
             room = rooms[self.room_name]
 
-            # If game was active and board not full, award win to other player
-            if not self.is_board_full(room["board"]) and len(room["players"]) == 2:
+            if len(room["players"]) == 2:
                 other_player = [p for p in room["players"] if p["channel"] != self.channel_name][0]
                 winner_username = other_player["username"]
                 
-                # Award win to the remaining player
-                await self.save_match_disconnect(
-                    room["usernames"].get("1") or room["usernames"].get(1), 
-                    room["usernames"].get("2") or room["usernames"].get(2), 
-                    winner_username,
-                    room["scores"][1],
-                    room["scores"][2]
-                )
+                # Check if game has actually started (at least one letter placed)
+                game_started = any(any(cell is not None for cell in row) for row in room["board"])
 
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        "type": "player_left",
-                        "winner": winner_username
-                    }
-                )
+                if game_started and not self.is_board_full(room["board"]):
+                    # Award win to the remaining player
+                    await self.save_match_disconnect(
+                        room["usernames"].get("1") or room["usernames"].get(1), 
+                        room["usernames"].get("2") or room["usernames"].get(2), 
+                        winner_username,
+                        room["scores"][1],
+                        room["scores"][2]
+                    )
+
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            "type": "player_left",
+                            "winner": winner_username
+                        }
+                    )
+                else:
+                    # Notify player left without awarding a win (lobby or early exit)
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            "type": "player_left",
+                            "winner": None
+                        }
+                    )
 
             room["players"] = [
                 p for p in room["players"]
@@ -308,25 +320,27 @@ class GameConsumer(AsyncWebsocketConsumer):
         used = room["used_words"]
 
         dictionary = [
-                        "AN","AM","AS","AT","BE","BY","DO","GO","HE","HI",
-            "IF","IN","IS","IT","ME","MY","NO","OF","ON","OR",
-            "OX","SO","TO","UP","US","WE",
+            # 2 LETTER WORDS
+            "AM","AN","AS","AT","AX","BE","BY","DO","GO","HE",
+            "HI","IF","IN","IS","IT","ME","MY","NO","OF","ON",
+            "OR","OX","PA","SO","TO","UP","US","WE","YE","YO",
 
-            "ACE","ACT","ADD","AGE","AIR","ALL","AND","ANT","ANY","APE",
-            "APP","ARC","ARM","ART","ASH","ASK","AWE","AXE","BAD","BAG",
-            "BAR","BAT","BAY","BED","BEE","BET","BID","BIG","BIN","BIT",
-            "BOB","BOG","BON","BOX","BOY","BUN","BUS","BUT","CAB","CAN",
-            "CAP","CAR","CAT","CUP","CUT","DAD","DAM","DAY","DEN","DID",
-            "DIG","DIM","DIN","DIP","DOG","DOT","DRY","DUE","EAR","EAT",
-            "EGG","END","ERA","EYE","FAN","FAR","FAT","FAX","FED","FEW",
-            "FIG","FIN","FIT","FIX","FLY","FOG","FOX","FUN","FUR","GAP",
-            "GAS","GEM","GET","GIG","GIN","GOD","GOT","GUM","GUN","GUY",
-            "GYM","HAD","HAM","HAT","HAY","HEM","HEN","HER","HID","HIM",
-            "HIP","HIT","HOG","HOP","HOT","HUB","HUG","HUT","ICE","INK",
-            "JAM","JAR","JET","JOB","JOG","JOY","JUG","KEY","KID","KIT",
-            "LAB","LAD","LAG","LAP","LAW","LEG","LET","LID","LIE","LIP",
-            "LOG","LOT","MAD","MAN","MAP","MAT","MAY","MEN","MET","MIX",
-            "MOB","MOP","MUD","MUG","NAP","NET","NEW","NOD","NON","NOR",
+            # 3 LETTER WORDS
+            "ACE","ACT","ADD","AGE","AID","AIM","AIR","ALL","AND","ANT",
+            "ANY","APE","APP","ARC","ARM","ART","ASH","ASK","AWE","AXE",
+            "BAD","BAG","BAR","BAT","BAY","BED","BEE","BET","BID","BIG",
+            "BIN","BIT","BOB","BOG","BOX","BOY","BUN","BUS","BUT","CAB",
+            "CAN","CAP","CAR","CAT","CUP","CUT","DAD","DAM","DAY","DEN",
+            "DID","DIG","DIM","DIN","DIP","DOG","DOT","DRY","DUE","EAR",
+            "EAT","EGG","END","ERA","EYE","FAN","FAR","FAT","FAX","FED",
+            "FEW","FIG","FIN","FIT","FIX","FLY","FOG","FOX","FUN","FUR",
+            "GAP","GAS","GEM","GET","GIG","GIN","GOD","GOT","GUM","GUN",
+            "GUY","GYM","HAD","HAM","HAT","HAY","HEM","HEN","HER","HID",
+            "HIM","HIP","HIT","HOG","HOP","HOT","HUB","HUG","HUT","ICE",
+            "INK","JAM","JAR","JET","JOB","JOG","JOY","JUG","KEY","KID",
+            "KIT","LAB","LAD","LAG","LAP","LAW","LEG","LET","LID","LIE",
+            "LIP","LOG","LOT","MAD","MAN","MAP","MAT","MAY","MET","MIX",
+            "MOB","MOM","MOP","MUD","MUG","NAP","NET","NEW","NOD","NOR",
             "NOT","NOW","NUT","OAK","ODD","OFF","OIL","OLD","ONE","ORB",
             "OUT","OWL","OWN","PAD","PAN","PAT","PAY","PEN","PET","PIG",
             "PIN","PIT","POT","PRO","PUB","PUP","PUT","RAG","RAM","RAN",
@@ -338,117 +352,133 @@ class GameConsumer(AsyncWebsocketConsumer):
             "WAS","WAX","WAY","WEB","WET","WHO","WHY","WIN","WON","WOW",
             "YAK","YAM","YAP","YEA","YES","YOU","ZIP","ZOO",
 
-            "ABLE","ACID","AGED","ALSO","AREA","ARMY","AWAY","BABY","BACK","BALL",
-            "BAND","BANK","BASE","BATH","BEAR","BEAT","BEEF","BEEN","BELL","BELT",
-            "BEST","BILL","BIRD","BLOW","BLUE","BOAT","BODY","BOMB","BOND","BONE",
-            "BOOK","BOOM","BOOT","BORN","BOSS","BOTH","BOWL","BULK","BURN","BUSH",
-            "BUSY","CALL","CALM","CAME","CAMP","CARD","CARE","CASE","CASH","CAST",
-            "CELL","CHAT","CHIP","CITY","CLUB","COAL","COAT","CODE","COLD","COME",
-            "COOK","COOL","COPE","COPY","CORE","COST","CREW","CROP","DARK","DATA",
-            "DATE","DAWN","DEAD","DEAL","DEAN","DEAR","DEBT","DEEP","DENY","DESK",
-            "DIAL","DICE","DIET","DISC","DISH","DISK","DOES","DONE","DOOR","DOWN",
-            "DRAW","DREW","DROP","DRUG","DUAL","DUCK","DUST","DUTY","EACH","EARN",
-            "EASE","EAST","EASY","EDGE","ELSE","EVEN","EVER","EVIL","EXIT","FACE",
-            "FACT","FAIL","FAIR","FALL","FARM","FAST","FATE","FEAR","FEED","FEEL",
-            "FEET","FELL","FELT","FILE","FILL","FILM","FIND","FINE","FIRE","FIRM",
-            "FISH","FIVE","FLAT","FLOW","FOOD","FOOT","FORD","FORM","FORT","FOUR",
-            "FREE","FROM","FUEL","FULL","FUND","GAIN","GAME","GATE","GAVE","GEAR",
-            "GENE","GIFT","GIRL","GIVE","GLAD","GOAL","GOES","GOLD","GOLF","GONE",
-            "GOOD","GRAY","GREY","GRID","GROW","HAIR","HALF","HALL","HAND","HANG",
-            "HARD","HARM","HATE","HAVE","HEAD","HEAR","HEAT","HELD","HELL","HELP",
-            "HERE","HERO","HIGH","HILL","HOLD","HOLE","HOLY","HOME","HOPE","HOST",
-            "HOUR","HUGE","HUNG","HUNT","HURT","IDEA","INCH","INTO","IRON","ITEM",
-            "JACK","JANE","JEAN","JOIN","JUMP","JURY","JUST","KEEP","KENT","KEPT",
-            "KICK","KILL","KIND","KING","KNEW","KNOW","LACK","LADY","LAID","LAKE",
-            "LAND","LANE","LAST","LATE","LEAD","LEFT","LESS","LIFE","LIFT","LIKE",
-            "LINE","LINK","LIST","LIVE","LOAD","LOAN","LOCK","LOGO","LONG","LOOK",
-            "LORD","LOSE","LOSS","LOST","LOVE","LUCK","MADE","MAIL","MAIN","MAKE",
-            "MALE","MANY","MARK","MASS","MATT","MEAL","MEAN","MEAT","MEET","MENU",
-            "MERE","MIKE","MILE","MILK","MIND","MINE","MISS","MODE","MOOD","MOON",
-            "MORE","MOST","MOVE","MUCH","MUST","NAME","NAVY","NEAR","NECK","NEED",
-            "NEWS","NEXT","NICE","NICK","NINE","NONE","NOSE","NOTE","OKAY","ONCE",
-            "ONLY","ONTO","OPEN","ORAL","OVER","PACE","PACK","PAGE","PAID","PAIN",
-            "PAIR","PALM","PARK","PART","PASS","PAST","PATH","PEAK","PICK","PINK",
-            "PIPE","PLAN","PLAY","PLOT","PLUG","PLUS","POLL","POOL","POOR","PORT",
-            "POST","PULL","PURE","PUSH","RACE","RAIL","RAIN","RANK","RATE","READ",
-            "REAL","REAR","RELY","RENT","REST","RICE","RICH","RIDE","RING","RISE",
-            "RISK","ROAD","ROCK","ROLE","ROLL","ROOF","ROOM","ROOT","ROSE","RULE",
-            "RUSH","RUTH","SAFE","SAID","SAKE","SALE","SALT","SAME","SAND","SAVE",
-            "SEAT","SEED","SEEK","SEEM","SEEN","SELF","SELL","SEND","SENT","SHIP",
-            "SHOP","SHOT","SHOW","SHUT","SICK","SIDE","SIGN","SITE","SIZE","SKIN",
-            "SLIP","SLOW","SNOW","SOFT","SOIL","SOLD","SOLE","SOME","SONG","SOON",
-            "SORT","SOUL","SPOT","STAR","STAY","STEP","STOP","SUCH","SUIT","SURE",
-            "TAKE","TALE","TALK","TALL","TANK","TAPE","TASK","TEAM","TECH","TELL",
-            "TEND","TERM","TEST","TEXT","THAN","THAT","THEM","THEN","THEY","THIN",
-            "THIS","TIME","TINY","TOLD","TOLL","TONE","TONY","TOOK","TOOL","TOUR",
-            "TOWN","TREE","TRIP","TRUE","TUNE","TURN","TYPE","UNIT","UPON","USED",
-            "USER","VARY","VAST","VERY","VICE","VIEW","VOTE","WAGE","WAIT","WAKE",
-            "WALK","WALL","WANT","WARD","WARM","WASH","WAVE","WAYS","WEAK","WEAR",
-            "WEEK","WELL","WENT","WERE","WEST","WHAT","WHEN","WHOM","WIDE","WIFE",
-            "WILD","WILL","WIND","WINE","WING","WIRE","WISE","WISH","WITH","WOOD",
-            "WORD","WORE","WORK","YARD","YEAH","YEAR","YOUR","ZERO","ZONE",
+            # 4 LETTER WORDS
+            "ABLE","ACID","AGED","ALSO","AREA","ARMY","AWAY","BABY","BACK",
+            "BALL","BAND","BANK","BASE","BATH","BEAR","BEAT","BEEF","BEEN",
+            "BELL","BELT","BEST","BILL","BIRD","BLOW","BLUE","BOAT","BODY",
+            "BOMB","BOND","BONE","BOOK","BOOM","BOOT","BORN","BOSS","BOTH",
+            "BOWL","BULK","BURN","BUSH","BUSY","CALL","CALM","CAME","CAMP",
+            "CARD","CARE","CASE","CASH","CAST","CELL","CHAT","CHIP","CITY",
+            "CLUB","COAL","COAT","CODE","COLD","COME","COOK","COOL","COPE",
+            "COPY","CORE","COST","CREW","CROP","DARK","DATA","DATE","DAWN",
+            "DEAD","DEAL","DEAN","DEAR","DEBT","DEEP","DENY","DESK","DIAL",
+            "DICE","DIET","DISC","DISH","DISK","DONE","DOOR","DOWN","DRAW",
+            "DREW","DROP","DRUG","DUAL","DUCK","DUST","DUTY","EACH","EARN",
+            "EASE","EAST","EASY","EDGE","ELSE","EVEN","EVER","EVIL","EXIT",
+            "FACE","FACT","FAIL","FAIR","FALL","FARM","FAST","FATE","FEAR",
+            "FEED","FEEL","FELL","FELT","FILE","FILL","FILM","FIND","FINE",
+            "FIRE","FIRM","FISH","FIVE","FLAT","FLOW","FOOD","FOOT","FORD",
+            "FORM","FORT","FOUR","FREE","FROM","FUEL","FULL","FUND","GAIN",
+            "GAME","GATE","GAVE","GEAR","GENE","GIFT","GIRL","GIVE","GLAD",
+            "GOAL","GOLD","GOLF","GONE","GOOD","GRAY","GREY","GRID","GROW",
+            "HAIR","HALF","HALL","HAND","HANG","HARD","HARM","HATE","HAVE",
+            "HEAD","HEAR","HEAT","HELD","HELL","HELP","HERE","HERO","HIGH",
+            "HILL","HOLD","HOLE","HOLY","HOME","HOPE","HOST","HOUR","HUGE",
+            "HUNG","HUNT","HURT","IDEA","INCH","INTO","IRON","ITEM","JOIN",
+            "JUMP","JURY","JUST","KEEP","KEPT","KICK","KILL","KIND","KING",
+            "KNEW","KNOW","LACK","LADY","LAID","LAKE","LAND","LANE","LAST",
+            "LATE","LEAD","LEFT","LESS","LIFE","LIFT","LIKE","LINE","LINK",
+            "LIST","LIVE","LOAD","LOAN","LOCK","LOGO","LONG","LOOK","LORD",
+            "LOSE","LOSS","LOST","LOVE","LUCK","MADE","MAIL","MAIN","MAKE",
+            "MALE","MANY","MARK","MASS","MATT","MEAL","MEAN","MEAT","MEET",
+            "MENU","MERE","MILE","MILK","MIND","MINE","MISS","MODE","MOOD",
+            "MOON","MORE","MOST","MOVE","MUCH","MUST","NAME","NAVY","NEAR",
+            "NECK","NEED","NEWS","NEXT","NICE","NINE","NONE","NOSE","NOTE",
+            "NOTES","OKAY","ONCE","ONLY","ONTO","OPEN","ORAL","OVER","PACE",
+            "PACK","PAGE","PAID","PAIN","PAIR","PALM","PARK","PART","PASS",
+            "PAST","PATH","PEAK","PICK","PINK","PIPE","PLAN","PLAY","PLOT",
+            "PLUG","PLUS","POLL","POOL","POOR","PORT","POST","PULL","PURE",
+            "PUSH","RACE","RAID","RAIL","RAIN","RANK","RATE","READ","REAL",
+            "REAR","RELY","RENT","REST","RICE","RICH","RIDE","RING","RISE",
+            "RISK","ROAD","ROCK","ROLE","ROLL","ROOF","ROOM","ROOT","ROSE",
+            "RULE","RUSH","SAFE","SAID","SAKE","SALE","SALT","SAME","SAND",
+            "SAVE","SEAT","SEED","SEEK","SEEM","SEEN","SELF","SELL","SEND",
+            "SENT","SHIP","SHOP","SHOT","SHOW","SHUT","SICK","SIDE","SIGN",
+            "SITE","SIZE","SKIN","SLIP","SLOW","SNOW","SOFT","SOIL","SOLD",
+            "SOLE","SOME","SONG","SOON","SORT","SOUL","SPOT","STAR","STAY",
+            "STEP","STOP","SUCH","SUIT","SURE","TAKE","TALE","TALK","TALL",
+            "TANK","TAPE","TASK","TEAM","TECH","TELL","TEND","TERM","TEST",
+            "TEXT","THAN","THAT","THEM","THEN","THEY","THIN","THIS","TIME",
+            "TINY","TOLD","TOLL","TONE","TOOK","TOOL","TOUR","TOWN","TREE",
+            "TRIP","TRUE","TUNE","TURN","TYPE","UNIT","UPON","USED","USER",
+            "VARY","VAST","VERY","VICE","VIEW","VOTE","WAGE","WAIT","WAKE",
+            "WALK","WALL","WANT","WARD","WARM","WASH","WAVE","WEAK","WEAR",
+            "WEEK","WELL","WENT","WERE","WEST","WHAT","WHEN","WHOM","WIDE",
+            "WIFE","WILD","WILL","WIND","WINE","WING","WIRE","WISE","WISH",
+            "WITH","WOOD","WORD","WORE","WORK","YARD","YEAH","YEAR","YOUR",
+            "ZERO","ZONE",
 
-            "ABOUT","ABOVE","ABUSE","ACTOR","ACUTE","ADMIT","ADOPT","ADULT","AFTER","AGAIN",
-            "AGENT","AGREE","AHEAD","ALARM","ALBUM","ALERT","ALIEN","ALIGN","ALIKE","ALIVE",
-            "ALLOW","ALONE","ALONG","ALTER","AMONG","ANGER","ANGLE","ANGRY","APART","APPLE",
-            "APPLY","ARENA","ARGUE","ARISE","ARRAY","ASIDE","ASSET","AUDIO","AVOID","AWARD",
-            "AWARE","BADLY","BAKER","BASES","BASIC","BASIS","BEACH","BEGAN","BEGIN","BEGUN",
-            "BEING","BELOW","BENCH","BILLY","BIRTH","BLACK","BLAME","BLIND","BLOCK","BLOOD",
-            "BOARD","BOOST","BOOTH","BOUND","BRAIN","BRAND","BREAD","BREAK","BREED","BRIEF",
-            "BRING","BROAD","BROKE","BROWN","BUILD","BUILT","BUYER","CABLE","CARRY","CATCH",
-            "CAUSE","CHAIN","CHAIR","CHART","CHASE","CHEAP","CHECK","CHEST","CHIEF","CHILD",
-            "CHINA","CHOSE","CIVIL","CLAIM","CLASS","CLEAN","CLEAR","CLICK","CLOCK","CLOSE",
-            "COACH","COAST","COULD","COUNT","COURT","COVER","CRAFT","CRASH","CRIME","CROSS",
-            "CROWD","CROWN","CURVE","CYCLE","DAILY","DANCE","DATED","DEALT","DEATH","DEBUT",
-            "DELAY","DEPTH","DOING","DOUBT","DOZEN","DRAFT","DRAMA","DRAWN","DREAM","DRESS",
-            "DRILL","DRINK","DRIVE","DROVE","DYING","EARLY","EARTH","EIGHT","ELITE","EMPTY",
-            "ENEMY","ENJOY","ENTER","ENTRY","EQUAL","ERROR","EVENT","EVERY","EXACT","EXIST",
-            "EXTRA","FAITH","FALSE","FAULT","FIBER","FIELD","FIFTH","FIFTY","FIGHT","FINAL",
-            "FIRST","FIXED","FLASH","FLEET","FLOOR","FLUID","FOCUS","FORCE","FORTH","FORTY",
-            "FORUM","FOUND","FRAME","FRANK","FRAUD","FRESH","FRONT","FRUIT","FULLY","FUNNY",
-            "GIANT","GIVEN","GLASS","GLOBE","GOING","GRACE","GRADE","GRAND","GRANT","GRASS",
-            "GREEN","GROSS","GROUP","GROWN","GUARD","GUESS","GUEST","GUIDE","HAPPY","HARRY",
-            "HEART","HEAVY","HENCE","HENRY","HORSE","HOTEL","HOUSE","HUMAN","IDEAL","IMAGE",
-            "INDEX","INNER","INPUT","ISSUE","JAPAN","JIMMY","JOINT","JONES","JUDGE","KNOWN",
-            "LABEL","LARGE","LASER","LATER","LAUGH","LAYER","LEARN","LEASE","LEAST","LEAVE",
-            "LEGAL","LEVEL","LEWIS","LIGHT","LIMIT","LOCAL","LOGIC","LOOSE","LOWER","LUCKY",
-            "LUNCH","LYING","MAGIC","MAJOR","MAKER","MARCH","MARIA","MATCH","MAYBE","MAYOR",
-            "MEANT","MEDIA","METAL","MIGHT","MINOR","MINUS","MIXED","MODEL","MONEY","MONTH",
-            "MORAL","MOTOR","MOUNT","MOUSE","MOUTH","MOVIE","MUSIC","NEEDS","NEVER","NEWLY",
-            "NIGHT","NOISE","NORTH","NOTED","NOTES","NOVEL","NURSE","OCCUR","OCEAN","OFFER",
-            "OFTEN","ORDER","OTHER","OUGHT","PAINT","PANEL","PAPER","PARTY","PEACE","PETER",
-            "PHASE","PHONE","PHOTO","PIECE","PILOT","PITCH","PLACE","PLAIN","PLANE","PLANT",
-            "PLATE","POINT","POUND","POWER","PRESS","PRICE","PRIDE","PRIME","PRINT","PRIOR",
-            "PRIZE","PROOF","PROUD","PROVE","QUEEN","QUICK","QUIET","QUITE","RADIO","RAISE",
-            "RANGE","RAPID","RATIO","REACH","READY","REFER","RIGHT","RIVAL","RIVER","ROBIN",
-            "ROGER","ROMAN","ROUGH","ROUND","ROUTE","ROYAL","RURAL","SCALE","SCENE","SCOPE",
-            "SCORE","SENSE","SERVE","SEVEN","SHALL","SHAPE","SHARE","SHARP","SHEET","SHELF",
-            "SHELL","SHIFT","SHINE","SHIRT","SHOCK","SHOOT","SHORT","SHOWN","SIGHT","SINCE",
-            "SIXTH","SIXTY","SIZED","SKILL","SLEEP","SLIDE","SMALL","SMART","SMILE","SMITH",
-            "SMOKE","SOLID","SOLVE","SORRY","SOUND","SOUTH","SPACE","SPARE","SPEAK","SPEED",
-            "SPEND","SPENT","SPLIT","SPORT","STAFF","STAGE","STAKE","STAND","START","STATE",
-            "STEAM","STEEL","STICK","STILL","STOCK","STONE","STOOD","STORE","STORM","STORY",
-            "STRIP","STUCK","STUDY","STUFF","STYLE","SUGAR","SUITE","SUPER","SWEET","TABLE",
-            "TAKEN","TASTE","TAXES","TEACH","TEETH","TERRY","TEXAS","THANK","THEFT","THEIR",
-            "THEME","THERE","THESE","THICK","THING","THINK","THIRD","THOSE","THREE","THREW",
-            "THROW","TIGHT","TIMES","TIRED","TITLE","TODAY","TOPIC","TOTAL","TOUCH","TOUGH",
-            "TOWER","TRACK","TRADE","TRAIN","TREAT","TREND","TRIAL","TRIED","TRIES","TRUCK",
-            "TRULY","TRUST","TRUTH","TWICE","UNDER","UNDUE","UNION","UNITY","UNTIL","UPPER",
-            "UPSET","URBAN","USAGE","USUAL","VALID","VALUE","VIDEO","VIRUS","VISIT","VITAL",
-            "VOICE","WASTE","WATCH","WATER","WHEEL","WHERE","WHICH","WHILE","WHITE","WHOLE",
-            "WHOSE","WOMAN","WOMEN","WORLD","WORRY","WORSE","WORST","WORTH","WOULD","WRITE",
-            "WRONG","WROTE","YOUNG","YOUTH","MADHAN"
+            # 5 LETTER WORDS
+            "ABOUT","ABOVE","ABUSE","ACTOR","ACUTE","ADMIT","ADOPT","ADULT",
+            "AFTER","AGAIN","AGENT","AGREE","AHEAD","ALARM","ALBUM","ALERT",
+            "ALIEN","ALIGN","ALIKE","ALIVE","ALLOW","ALONE","ALONG","ALTER",
+            "AMONG","ANGER","ANGLE","ANGRY","APART","APPLE","APPLY","ARENA",
+            "ARGUE","ARISE","ARRAY","ASIDE","ASSET","AUDIO","AVOID","AWARD",
+            "AWARE","BADLY","BAKER","BASIC","BASIS","BEACH","BEGAN","BEGIN",
+            "BEGUN","BEING","BELOW","BENCH","BIRTH","BLACK","BLAME","BLIND",
+            "BLOCK","BLOOD","BOARD","BOOST","BOOTH","BOUND","BRAIN","BRAND",
+            "BREAD","BREAK","BREED","BRIEF","BRING","BROAD","BROKE","BROWN",
+            "BUILD","BUILT","BUYER","CABLE","CARRY","CATCH","CAUSE","CHAIN",
+            "CHAIR","CHART","CHASE","CHEAP","CHECK","CHEST","CHIEF","CHILD",
+            "CHINA","CHOSE","CIVIL","CLAIM","CLASS","CLEAN","CLEAR","CLICK",
+            "CLOCK","CLOSE","COACH","COAST","COULD","COUNT","COURT","COVER",
+            "CRAFT","CRASH","CRIME","CROSS","CROWD","CROWN","CURVE","CYCLE",
+            "DAILY","DANCE","DATED","DEALT","DEATH","DEBUT","DELAY","DEPTH",
+            "DOING","DOUBT","DOZEN","DRAFT","DRAMA","DRAWN","DREAM","DRESS",
+            "DRILL","DRINK","DRIVE","DROVE","DYING","EARLY","EARTH","EIGHT",
+            "ELITE","EMPTY","ENEMY","ENJOY","ENTER","ENTRY","EQUAL","ERROR",
+            "EVENT","EVERY","EXACT","EXIST","EXTRA","FAITH","FALSE","FAULT",
+            "FIBER","FIELD","FIFTH","FIFTY","FIGHT","FINAL","FIRST","FIXED",
+            "FLASH","FLEET","FLOOR","FLUID","FOCUS","FORCE","FORTH","FORTY",
+            "FORUM","FOUND","FRAME","FRANK","FRAUD","FRESH","FRONT","FRUIT","FULLY",
+            "FUNNY","GIANT","GIVEN","GLASS","GLOBE","GOING","GRACE","GRADE",
+            "GRAND","GRANT","GRASS","GREEN","GROSS","GROUP","GROWN","GUARD",
+            "GUESS","GUEST","GUIDE","HAPPY","HEART","HEAVY","HENCE","HORSE",
+            "HOTEL","HOUSE","HUMAN","IDEAL","IMAGE","INDEX","INNER","INPUT",
+            "ISSUE","JOINT","JUDGE","KNOWN","LABEL","LARGE","LASER","LATER",
+            "LAUGH","LAYER","LEARN","LEASE","LEAST","LEAVE","LEGAL","LEVEL",
+            "LIGHT","LIMIT","LOCAL","LOGIC","LOOSE","LOWER","LUCKY","LUNCH",
+            "LYING","MAGIC","MAJOR","MAKER","MARCH","MATCH","MAYBE","MAYOR",
+            "MEANT","MEDIA","METAL","MIGHT","MINOR","MINUS","MIXED","MODEL",
+            "MONEY","MONTH","MORAL","MOTOR","MOUNT","MOUSE","MOUTH","MOVIE",
+            "MUSIC","NEVER","NEWLY","NIGHT","NOISE","NORTH","NOTES","NOVEL",
+            "NURSE","OCCUR","OCEAN","OFFER","OFTEN","ORDER","OTHER","OUGHT",
+            "PAINT","PANEL","PAPER","PARTY","PEACE","PHASE","PHONE","PHOTO",
+            "PIECE","PILOT","PITCH","PLACE","PLAIN","PLANE","PLANT","PLATE",
+            "POINT","POUND","POWER","PRESS","PRICE","PRIDE","PRIME","PRINT",
+            "PRIOR","PRIZE","PROOF","PROUD","PROVE","QUEEN","QUICK","QUIET",
+            "QUITE","RADIO","RAISE","RANGE","RAPID","RATIO","REACH","READY",
+            "REFER","RIGHT","RIVAL","RIVER","ROMAN","ROUGH","ROUND","ROUTE",
+            "ROYAL","RURAL","SCALE","SCENE","SCOPE","SCORE","SENSE","SERVE",
+            "SEVEN","SHALL","SHAPE","SHARE","SHARP","SHEET","SHELF","SHELL",
+            "SHIFT","SHINE","SHIRT","SHOCK","SHOOT","SHORT","SHOWN","SIGHT",
+            "SINCE","SIXTH","SIXTY","SKILL","SLEEP","SLIDE","SMALL","SMART",
+            "SMILE","SMOKE","SOLID","SOLVE","SORRY","SOUND","SOUTH","SPACE",
+            "SPARE","SPEAK","SPEED","SPEND","SPENT","SPLIT","SPORT","STAFF",
+            "STAGE","STAKE","STAND","START","STATE","STEAM","STEEL","STICK",
+            "STILL","STOCK","STONE","STOOD","STORE","STORM","STORY","STRIP",
+            "STUCK","STUDY","STUFF","STYLE","SUGAR","SUITE","SUPER","SWEET",
+            "TABLE","TAKEN","TASTE","TEACH","THANK","THEFT","THEIR","THEME",
+            "THERE","THESE","THICK","THING","THINK","THIRD","THREE","THREW","THROW",
+            "TIGHT","TITLE","TODAY","TOPIC","TOTAL","TOUCH","TOUGH","TOWER",
+            "TRACK","TRADE","TRAIN","TREAT","TREND","TRIAL","TRIED","TRUCK",
+            "TRULY","TRUST","TRUTH","TWICE","UNDER","UNDUE","UNION","UNITY",
+            "UNTIL","UPPER","UPSET","URBAN","USAGE","USUAL","VALID","VALUE",
+            "VIDEO","VIRUS","VISIT","VITAL","VOICE","WASTE","WATCH","WATER",
+            "WHEEL","WHERE","WHICH","WHILE","WHITE","WHOLE","WHOSE","WOMAN",
+            "WORLD","WORRY","WORSE","WORST","WORTH","WOULD","WRITE","WRONG",
+            "WROTE","YOUNG","YOUTH"
         ]
 
         found = []
 
         for row in board:
-            line = "".join([c if c else "" for c in row])
+            line = "".join([c if c else " " for c in row])
             found += self.find_words(line, dictionary, used)
 
         for col in range(5):
             line = "".join([
-                board[r][col] if board[r][col] else ""
+                board[r][col] if board[r][col] else " "
                 for r in range(5)
             ])
             found += self.find_words(line, dictionary, used)

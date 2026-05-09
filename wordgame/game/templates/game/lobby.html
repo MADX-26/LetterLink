@@ -92,6 +92,24 @@
                     window.location.replace(`/play/{{ room_name }}/`);
                 }, 800);
             }
+
+            if (data.type === "player_left") {
+                document.getElementById("status").innerText = "Opponent left the lobby.";
+                document.getElementById("status").style.color = "#ef4444";
+                
+                const loader = document.querySelector(".modern-loader");
+                if (loader) loader.style.display = "none";
+
+                if (!document.getElementById("return-btn")) {
+                    const btn = document.createElement("button");
+                    btn.id = "return-btn";
+                    btn.innerText = "Return to Home";
+                    btn.className = "modern-btn";
+                    btn.style.marginTop = "1.5rem";
+                    btn.onclick = () => window.location.href = "/";
+                    document.getElementById("status").after(btn);
+                }
+            }
         };
 
     </script>
