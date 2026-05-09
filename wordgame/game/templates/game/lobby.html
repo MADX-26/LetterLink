@@ -1,118 +1,349 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <title>Lobby - Grid Word</title>
-    <link rel="stylesheet" href="{% static 'game/style.css' %}">
+
+    <link rel="stylesheet"
+          href="{% static 'game/style.css' %}">
+
     <style>
-        .room-code-badge {
-            font-size: 2rem;
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f3f4f6;
+        }
+
+        .modern-card {
+            width: 650px;
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+        .modern-header {
+            text-align: center;
+        }
+
+        .modern-title {
+            font-size: 48px;
             font-weight: 800;
             color: #3b82f6;
+            margin-bottom: 10px;
+        }
+
+        .modern-subtitle {
+            color: #6b7280;
+            font-size: 18px;
+        }
+
+        .room-code-badge {
+
+            font-size: 42px;
+            font-weight: 800;
+
+            color: #3b82f6;
+
             background: #eff6ff;
-            padding: 1rem 2rem;
-            border-radius: 1rem;
-            margin: 1.5rem 0;
-            letter-spacing: 0.25rem;
+
+            padding: 20px 40px;
+
+            border-radius: 20px;
+
+            margin: 35px auto;
+
+            letter-spacing: 10px;
+
             display: inline-block;
         }
+
         .status-text {
+
             color: #6b7280;
-            font-size: 1.125rem;
-            margin-top: 1rem;
+
+            font-size: 22px;
+
+            margin-top: 10px;
+
+            text-align: center;
         }
+
         .modern-loader {
-            margin: 2rem auto;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
+
+            margin: 35px auto;
+
+            border: 5px solid #e5e7eb;
+
+            border-top: 5px solid #3b82f6;
+
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+
+            width: 50px;
+
+            height: 50px;
+
             animation: spin 1s linear infinite;
         }
+
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
+
+        .divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 35px 0;
+        }
+
+        .modern-btn {
+
+            padding: 14px 24px;
+
+            background: #3b82f6;
+
+            color: white;
+
+            border: none;
+
+            border-radius: 12px;
+
+            cursor: pointer;
+
+            font-size: 16px;
+
+            font-weight: 600;
+
+            transition: 0.3s;
+        }
+
+        .modern-btn:hover {
+            background: #2563eb;
+        }
+
+        .footer-link {
+            text-decoration: none;
+            font-weight: 600;
+        }
+
     </style>
+
 </head>
+
 <body>
-    <div class="modern-card" style="text-align: center;">
-        <div class="modern-header">
-            <h1 class="modern-title">Game Lobby</h1>
-            <p class="modern-subtitle">Invite a friend to join the game</p>
-        </div>
+
+<div class="modern-card">
+
+    <div class="modern-header">
+
+        <h1 class="modern-title">
+            Game Lobby
+        </h1>
+
+        <p class="modern-subtitle">
+            Invite a friend to join the game
+        </p>
+
+    </div>
+
+
+    <!-- ROOM CODE -->
+
+    <div style="text-align:center;">
 
         <div class="room-code-badge">
             {{ room_name }}
         </div>
 
-        <div id="status" class="status-text">
-            Waiting for second player...
-        </div>
-
-        <div class="modern-loader"></div>
-
-        <div class="divider"></div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="color: #6b7280;">Logged in as <b>{{ request.user.username }}</b></span>
-            <a href="/logout/" class="footer-link" style="color: #ef4444;">Logout</a>
-        </div>
     </div>
 
-    <script>
 
-        const socket = new WebSocket(
-            `ws://${window.location.host}/ws/game/{{ room_name }}/`
-        );
+    <!-- STATUS -->
 
-        socket.onopen = () => {
-            console.log("Lobby connected");
-        };
+    <div id="status" class="status-text">
 
-        socket.onmessage = (event) => {
+        Waiting for second player...
 
-            const data = JSON.parse(event.data);
-            console.log(data);
+    </div>
 
-            if (data.type === "player_assignment") {
 
-                document.getElementById("status").innerText =
-                    `You are Player ${data.player} — waiting for opponent...`;
+    <!-- LOADER -->
+
+    <div class="modern-loader"></div>
+
+
+    <!-- DIVIDER -->
+
+    <div class="divider"></div>
+
+
+    <!-- FOOTER -->
+
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+    ">
+
+        <span style="color:#6b7280;">
+
+            Logged in as
+
+            <b>{{ request.user.username }}</b>
+
+        </span>
+
+        <a href="/logout/"
+           class="footer-link"
+           style="color:#ef4444;">
+
+            Logout
+
+        </a>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    // =====================================
+    // SECURE WEBSOCKET FIX
+    // =====================================
+
+    const protocol =
+        window.location.protocol === "https:"
+            ? "wss"
+            : "ws";
+
+    const socket = new WebSocket(
+
+        `${protocol}://${window.location.host}/ws/game/{{ room_name }}/`
+
+    );
+
+
+    socket.onopen = () => {
+
+        console.log("Lobby Connected");
+    };
+
+
+    socket.onerror = (error) => {
+
+        console.log("Socket Error:", error);
+    };
+
+
+    socket.onclose = () => {
+
+        console.log("Socket Closed");
+    };
+
+
+    socket.onmessage = (event) => {
+
+        const data = JSON.parse(event.data);
+
+        console.log(data);
+
+
+        // ==========================
+        // PLAYER ASSIGNMENT
+        // ==========================
+
+        if (data.type === "player_assignment") {
+
+            document.getElementById("status")
+                .innerText =
+
+                `You joined as Player ${data.player}`;
+
+        }
+
+
+        // ==========================
+        // START GAME
+        // ==========================
+
+        if (data.type === "start_game") {
+
+            document.getElementById("status")
+                .innerText =
+
+                "Opponent joined — starting game...";
+
+            document.querySelector(".modern-loader")
+                .style.display = "none";
+
+            setTimeout(() => {
+
+                window.location.href =
+                    `/play/{{ room_name }}/`;
+
+            }, 1200);
+        }
+
+
+        // ==========================
+        // PLAYER LEFT
+        // ==========================
+
+        if (data.type === "player_left") {
+
+            document.getElementById("status")
+                .innerText =
+
+                "Opponent left the lobby";
+
+            document.getElementById("status")
+                .style.color = "#ef4444";
+
+            document.querySelector(".modern-loader")
+                .style.display = "none";
+
+
+            // BUTTON
+            if (!document.getElementById("return-btn")) {
+
+                const btn =
+                    document.createElement("button");
+
+                btn.id = "return-btn";
+
+                btn.innerText = "Return Home";
+
+                btn.className = "modern-btn";
+
+                btn.style.marginTop = "25px";
+
+                btn.onclick = () => {
+
+                    window.location.href = "/";
+                };
+
+                document.getElementById("status")
+                    .after(btn);
             }
+        }
+    };
 
-            if (data.type === "start_game") {
-
-                document.getElementById("status").innerText =
-                    "Game starting...";
-
-                setTimeout(() => {
-                    window.location.replace(`/play/{{ room_name }}/`);
-                }, 800);
-            }
-
-            if (data.type === "player_left") {
-                document.getElementById("status").innerText = "Opponent left the lobby.";
-                document.getElementById("status").style.color = "#ef4444";
-                
-                const loader = document.querySelector(".modern-loader");
-                if (loader) loader.style.display = "none";
-
-                if (!document.getElementById("return-btn")) {
-                    const btn = document.createElement("button");
-                    btn.id = "return-btn";
-                    btn.innerText = "Return to Home";
-                    btn.className = "modern-btn";
-                    btn.style.marginTop = "1.5rem";
-                    btn.onclick = () => window.location.href = "/";
-                    document.getElementById("status").after(btn);
-                }
-            }
-        };
-
-    </script>
+</script>
 
 </body>
 
