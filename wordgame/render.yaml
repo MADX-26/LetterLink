@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: letterlink
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "daphne -b 0.0.0.0 -p $PORT config.asgi:application"
